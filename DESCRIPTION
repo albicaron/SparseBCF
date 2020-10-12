@@ -1,0 +1,17 @@
+Package: SparseBCF
+Type: Package
+Title: Sparse Bayesian Causal Forest for Heterogeneous Treatment Effects Estimation
+Version: 1.0
+Date: 2020-09-28
+Author: Alberto Caron
+Maintainer: Alberto Caron <alberto.caron.19@ucl.ac.uk>
+Description: The package implements Sparse Bayesian Causal Forest. The implementation relies on the bcf package by Hahn, Murray and Carvalho (2017).
+License: GPL-3
+LinkingTo: Rcpp, RcppArmadillo
+NeedsCompilation: yes
+RoxygenNote: 7.1.1
+Imports: 
+    Rcpp,
+    RcppArmadillo
+Packaged: 2020-09-20 11:18:40 UTC; alberto
+Encoding: UTF-8
