@@ -845,11 +845,11 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
 
   treef.close();
 
-  return(List::create(_["yhat_post"] = yhat_post, _["m_post"] = m_post, _["b_post"] = b_post, 
-                      _["b_est_post"] = b_est_post, _["sigma"] = sigma_post, _["msd"] = msd_post, 
-                      _["bsd"] = bsd_post, _["gamma"] = gamma_post, _["random_var_post"] = random_var_post, 
-                      _["bscale1"] = mybscale1, _["bscale0"] = mybscale0, _["varcnt_con"] = varcnt_con, 
-                        _["varcnt_mod"] = varcnt_mod, _["varprb_con"] = varprb_con, _["varprb_mod"] = varprb_mod
+  return(List::create(_["yhat_post"] = yhat_post, _["m_post"] = m_post, _["b_post"] = b_post,
+                      _["b_est_post"] = b_est_post, _["sigma"] = sigma_post, _["msd"] = msd_post,
+                      _["bsd"] = bsd_post, _["gamma"] = gamma_post, _["random_var_post"] = random_var_post,
+                      _["bscale1"] = mybscale1, _["bscale0"] = mybscale0, _["varcnt_con"] = varcnt_con,
+                      _["varcnt_mod"] = varcnt_mod, _["varprb_con"] = varprb_con, _["varprb_mod"] = varprb_mod
   ));
 
 }
