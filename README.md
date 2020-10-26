@@ -1,2 +1,2 @@
 # SparseBCF
-Implements Sparse Bayesian Causal Forest
+Implements Sparse Bayesian Causal Forest.
