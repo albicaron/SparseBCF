@@ -388,7 +388,7 @@ SparseBCF <-
     return(
       list(sigma = sdy*fitbcf$sigma,
            yhat = muy + sdy*fitbcf$yhat_post[,order(perm)],
-           #       mu  = m_post,
+           mu  = m_post,
            tau = tau_post,
            mu_scale = fitbcf$msd*sdy,
            tau_scale = fitbcf$bsd*sdy,
@@ -422,7 +422,7 @@ SparseBCF <-
     return(
       list(sigma = sdy*fitbcf$sigma,
            yhat = muy + sdy*fitbcf$yhat_post[,order(perm)],
-           #       mu  = m_post,
+           mu  = m_post,
            tau = tau_post,
            tau_pred = tau_pred,
            mu_scale = fitbcf$msd*sdy,
