@@ -5,7 +5,7 @@
 #' @export
 NULL
 
-cSparseBCF <- function(y_, z_, x_con_, x_mod_, x_mod_est_, x_con_info_list, x_mod_info_list, random_des, random_var, random_var_ix, random_var_df, burn, nd, thin, ntree_mod, ntree_con, lambda, nu, con_sd, mod_sd, con_alpha, con_beta, mod_alpha, mod_beta, a, b, rho, rho_tau, theta, omega, weights_mu, weights_tau, treef_name_, dart, aug, status_interval = 100L, RJ = FALSE, use_mscale = TRUE, use_bscale = TRUE, b_half_normal = TRUE, trt_init = 1.0) {
-    .Call('_SparseBCF_cSparseBCF', PACKAGE = 'SparseBCF', y_, z_, x_con_, x_mod_, x_mod_est_, x_con_info_list, x_mod_info_list, random_des, random_var, random_var_ix, random_var_df, burn, nd, thin, ntree_mod, ntree_con, lambda, nu, con_sd, mod_sd, con_alpha, con_beta, mod_alpha, mod_beta, a, b, rho, rho_tau, theta, omega, weights_mu, weights_tau, treef_name_, dart, aug, status_interval, RJ, use_mscale, use_bscale, b_half_normal, trt_init)
+cSparseBCF <- function(y_, z_, x_con_, x_mod_, x_mod_est_, x_con_info_list, x_mod_info_list, random_des, random_var, random_var_ix, random_var_df, burn, nd, thin, ntree_mod, ntree_con, lambda, nu, con_sd, mod_sd, con_alpha, con_beta, mod_alpha, mod_beta, a, b, rho, rho_tau, theta, omega, weights_mu, weights_tau, treef_name_mu_, treef_name_tau_, dart, aug, status_interval = 100L, RJ = FALSE, use_mscale = TRUE, use_bscale = TRUE, b_half_normal = TRUE, trt_init = 1.0) {
+    .Call('_SparseBCF_cSparseBCF', PACKAGE = 'SparseBCF', y_, z_, x_con_, x_mod_, x_mod_est_, x_con_info_list, x_mod_info_list, random_des, random_var, random_var_ix, random_var_df, burn, nd, thin, ntree_mod, ntree_con, lambda, nu, con_sd, mod_sd, con_alpha, con_beta, mod_alpha, mod_beta, a, b, rho, rho_tau, theta, omega, weights_mu, weights_tau, treef_name_mu_, treef_name_tau_, dart, aug, status_interval, RJ, use_mscale, use_bscale, b_half_normal, trt_init)
 }
 

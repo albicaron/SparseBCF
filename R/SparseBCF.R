@@ -67,10 +67,11 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #' @param z Treatment variable
 #' @param x_control Design matrix for the "prognostic" function mu(x)
 #' @param x_moderate Design matrix for the covariate-dependent treatment effects tau(x)
-#' @param pihat Length n estimates of
-#' @param OOB Boolean for Out-of-Bag prediction of CATE (default is FALSE)
-#' @param x_pred Design test-set matrix X for OOB prediction
-#' @param z_pred Binary test-set treatment vector for OOB prediction
+#' @param pihat Length n estimates of Propensity Score
+#' @param OOB Boolean for Out-of-Sample prediction of mu(x,pi) and CATE (default is FALSE)
+#' @param x_pred_mu Design test-set matrix X for OOB prediction
+#' @param pi_pred Length n predicted Propensity Score for test-set matrix X
+#' @param x_pred_tau Design test-set matrix X for OOB prediction
 #' @param sparse Boolean for implementing Sparse BCF (default is TRUE). sparse=FALSE implements default BCF
 #' @param a First parameter of the hyperprior Beta(a,b) distribution (default a=0.5)
 #' @param b Second parameter of the Beta hyperprior Beta(a,b) distribution (default b=1)
@@ -78,7 +79,8 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #' @param weights_mu Vector of informative weights for mu(x, pi(x)), last entry is the weight corresponding to pi(x). Length must be (P+1)
 #' @param inform_tau Boolean for informative prior weights in the Dirichlet on tau(x)
 #' @param weights_tau Vector of informative weights for tau(x). Length must be P
-#' @param save_trees_dir File where trees info are saved for OOB prediction. If unspecified a temporary file is used, then deleted
+#' @param save_trees_mu_dir File where trees info are saved for OOB_mu prediction. If unspecified a temporary file is used, then deleted
+#' @param save_trees_tau_dir File where trees info are saved for OOB_tau prediction. If unspecified a temporary file is used, then deleted
 #' @param nburn Number of burn-in MCMC iterations
 #' @param nsim Number of MCMC iterations to save after burn-in
 #' @param nthin Save every nthin'th MCMC iterate. The total number of MCMC iterations will be nsim*nthin + nburn.
@@ -113,6 +115,7 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #'\donttest{
 #'
 #' # data generating process
+#' library(SparseBCF)
 #' p = 10    # control and moderating variables
 #' n = 250
 #' #
@@ -143,7 +146,7 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #' pihat = pnorm(q)
 #'
 #' # Higher number of MCMC iterations is recommended; here it is just 4000 for time complexity
-#' SparseBCF_fit = SparseBCF(y, z, x, x, pihat, nburn=2000, nsim=2000)
+#' SparseBCF_fit = SparseBCF(y = y, z = z, x_control = x, pihat = pihat, nburn=2000, nsim=2000)
 #'
 #' # Get posterior of treatment effects
 #' tau_post = SparseBCF_fit$tau
@@ -161,6 +164,7 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #'\dontshow{
 #'
 #' # data generating process
+#' library(SparseBCF)
 #' p = 10    # control and moderating variables
 #' n = 250
 #' #
@@ -191,7 +195,7 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #' pihat = pnorm(q)
 #'
 #' # Higher number of MCMC iterations is recommended; here it is just 4000 for time complexity
-#' SparseBCF_fit = SparseBCF(y, z, x, x, pihat, nburn=10, nsim=10)
+#' SparseBCF_fit = SparseBCF(y = y, z = z, x_control = x, pihat = pihat, nburn=2000, nsim=2000)
 #'
 #' # Get posterior of treatment effects
 #' tau_post = SparseBCF_fit$tau
@@ -211,13 +215,11 @@ Rcpp::loadModule(module = "TreeSamples", TRUE)
 #' @export
 SparseBCF <-
   function(y, z, x_control, x_moderate=x_control, pihat,
-           OOB = FALSE, x_pred, z_pred,
-           sparse=TRUE,
-           a=0.5,
-           b=1,
+           OOB = FALSE, x_pred_mu = NULL, pi_pred = NULL, x_pred_tau = NULL,
+           sparse=TRUE, a=0.5, b=1,
            inform_mu = FALSE, weights_mu = NULL,
            inform_tau = FALSE, weights_tau = NULL,
-           save_trees_dir,
+           save_trees_mu_dir, save_trees_tau_dir,
            nburn, nsim, nthin = 1, update_interval = 1000,
            ntree_control = 200,
            sd_control = 2*sd(y),
@@ -282,6 +284,14 @@ SparseBCF <-
   if(length(rho_tau)==0) rho_tau=ceiling(p/2)  #  More sparsity on TAU
 
 
+  if (is.null(x_pred_tau)) x_pred_tau = x_pred_mu
+
+
+  # Check OOB options
+  if (OOB == TRUE & is.null(x_pred_mu)) stop("OOB prediction for mu(x, pi) activated but no x_pred_mu provided")
+  if (OOB == TRUE & is.null(pi_pred)) stop("OOB prediction for mu(x, pi) activated but no pi_pred provided")
+  if (class(OOB) != "logical") stop("OOB_mu must be boolean")
+
 
   # Check "informed" for Mu
   if (inform_mu == TRUE & is.null(weights_mu)) stop("informative prior for mu(x) option activated but no weights_mu provided")
@@ -330,9 +340,9 @@ SparseBCF <-
   }
 
 
-  # Saving forest for OOB prediction
-  save_trees_dir = tempfile(pattern = "forest", fileext = ".txt")
-
+  # Saving forest for OOB_tau prediction
+  save_trees_mu_dir = tempfile(pattern = "forest_mu", fileext = ".txt")
+  save_trees_tau_dir = tempfile(pattern = "forest_tau", fileext = ".txt")
 
   perm = order(z, decreasing=TRUE)
 
@@ -355,7 +365,8 @@ SparseBCF <-
                       omega,
                       weights_mu,
                       weights_tau,
-                      save_trees_dir,
+                      save_trees_mu_dir,
+                      save_trees_tau_dir,
                       dart=sparse,
                       aug=augment,
                       status_interval = update_interval,
@@ -363,32 +374,23 @@ SparseBCF <-
                       use_bscale = use_tauscale,
                       b_half_normal = TRUE)
 
-  #B = drop(fit$post_B)
-  #B0 = fit$b0
-  #EYs = fit$post_yhat
 
-  #return(List::create(_["m_post"] = m_post, _["b_post"] = b_post, _["b_est_post"] = b_est_post,
-  #                     _["sigma"] = sigma_post, _["msd"] = msd_post, _["bsd"] = bsd_post,
-  #                     _["gamma"] = gamma_post, _["random_var_post"] = random_var_post
+  ac = fitbcf$m_post[,order(perm)]
+  Tm = fitbcf$b_post[,order(perm)] * (1.0/ (fitbcf$bscale1 - fitbcf$bscale0))
+  Tc = ac * (1.0/fitbcf$msd)
 
-  m_post = muy + sdy*fitbcf$m_post[,order(perm)]
   tau_post = sdy*fitbcf$b_post[,order(perm)]
-  #yhat_post = muy + sdy*fitbcf$m_post
-  #yhat_post[,z==1] = yhat_post[,z==1] + fitbcf$b_post
-  #yhat_post = (muy + sdy*fitbcf$m_post)
-  #yhat_post[,z[perm]==1] = yhat_post[,z[perm]==1] + sdy*fitbcf$b_post
-  #yhat_post = yhat_post[,order(perm)]
+  mu_post  = muy + sdy*(Tc*fitbcf$msd + Tm*fitbcf$bscale0)
 
 
+  # if no OOB is specified
   if (OOB == F) {
-
-    file.remove(save_trees_dir)
 
     # Returns
     return(
       list(sigma = sdy*fitbcf$sigma,
            yhat = muy + sdy*fitbcf$yhat_post[,order(perm)],
-           mu  = m_post,
+           mu  = mu_post,
            tau = tau_post,
            mu_scale = fitbcf$msd*sdy,
            tau_scale = fitbcf$bsd*sdy,
@@ -401,29 +403,42 @@ SparseBCF <-
            varprb_tau = fitbcf$varprb_mod
       )
     )
+
   }
 
 
+
+  # If OOB estimation is specified
   if (OOB == T) {
 
-    perm_pred = order(z_pred, decreasing=TRUE)
+    cat("\n\n###########################\n")
+    cat("OOB predicting tau(x)\n")
+
+    ts_tau = TreeSamples$new()
+    ts_tau$load(save_trees_tau_dir)
+
+    insam_tau = ts_tau$predict(t(x_pred_tau))
+    tau_pred = sdy*(fitbcf$bscale1 - fitbcf$bscale0)*insam_tau
+
 
     cat("\n\n###########################\n")
-    cat("OOB loading forest\n")
+    cat("OOB predicting mu(x)\n")
 
-    ts = TreeSamples$new()
-    ts$load(save_trees_dir)
+    x_pred_mu = cbind(x_pred_mu, as.matrix(pi_pred))
 
-    insam = ts$predict(t(x_pred[perm_pred, ]))
-    tau_pred = sdy*(fitbcf$bscale1 - fitbcf$bscale0)*insam
-    tau_pred = tau_pred[, order(perm_pred)]
+    ts_mu = TreeSamples$new()
+    ts_mu$load(save_trees_mu_dir)
+
+    Tc_pred = ts_mu$predict(t(x_pred_mu))
+    mu_pred  = muy + sdy*(Tc_pred*fitbcf$msd + insam_tau*fitbcf$bscale0)
 
     # Returns
     return(
       list(sigma = sdy*fitbcf$sigma,
            yhat = muy + sdy*fitbcf$yhat_post[,order(perm)],
-           mu  = m_post,
+           mu  = mu_post,
            tau = tau_post,
+           mu_pred = mu_pred,
            tau_pred = tau_pred,
            mu_scale = fitbcf$msd*sdy,
            tau_scale = fitbcf$bsd*sdy,
@@ -437,10 +452,12 @@ SparseBCF <-
       )
     )
 
-    rm(ts)
-    file.remove(save_trees_dir)
+    rm(ts_mu, ts_tau)
+    file.remove(save_trees_mu_dir)
+    file.remove(save_trees_tau_dir)
 
   }
+
 
 
 }

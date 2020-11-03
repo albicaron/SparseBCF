@@ -39,17 +39,18 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
                 double mod_sd, // Var(b(x)) = mod_sd^2 marginally a priori (approx)
                 double con_alpha, double con_beta,
                 double mod_alpha, double mod_beta,
-				double a,
-				double b,
-				double rho,
-				double rho_tau,
-				double theta,
-				double omega,
-				NumericVector weights_mu,
-				NumericVector weights_tau,
-                CharacterVector treef_name_,
-				bool dart,
-				bool aug,
+        				double a,
+        				double b,
+        				double rho,
+        				double rho_tau,
+        				double theta,
+        				double omega,
+        				NumericVector weights_mu,
+        				NumericVector weights_tau,
+        				CharacterVector treef_name_mu_,
+                CharacterVector treef_name_tau_,
+        				bool dart,
+        				bool aug,
                 int status_interval=100,
                 bool RJ= false, bool use_mscale=true, bool use_bscale=true, bool b_half_normal=true,
                 double trt_init = 1.0)
@@ -64,8 +65,15 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
 
   if(randeff) Rcout << "Using random effects." << std::endl;
 
-  std::string treef_name = as<std::string>(treef_name_);
-  std::ofstream treef(treef_name.c_str());
+
+  // Write trees for mu(x)
+  std::string treef_name_mu = as<std::string>(treef_name_mu_);
+  std::ofstream treef_mu(treef_name_mu.c_str());
+
+  // Write trees for tau(x)
+  std::string treef_name_tau = as<std::string>(treef_name_tau_);
+  std::ofstream treef_tau(treef_name_tau.c_str());
+
 
   RNGScope scope;
   RNG gen; //this one random number generator is used in all draws
@@ -192,8 +200,6 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
   for(NumericVector::iterator it=weights_tau.begin(); it!= weights_tau.end(); ++it) {
     col_ind_tau_.push_back(*it);
   }
-
-
 
 
 
@@ -402,16 +408,18 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
 	NumericMatrix varprb_mod(nd,p_mod);
 
 
+	// Write mu(x) tree to file
+	treef_mu << xi_con   << std::endl; //cutpoints
+	treef_mu << ntree_con << std::endl;  //number of trees
+	treef_mu << p_con << std::endl;  //dimension of x's
+	treef_mu << (int)(nd / thin) << std::endl;
 
 
-  // Write tree to file
-  treef << xi_mod << std::endl; //cutpoints
-  treef << ntree_mod << std::endl;  //number of trees
-  treef << p_mod << std::endl;  //dimension of x's
-  treef << (int)(nd / thin) << std::endl;
-
-
-
+  // Write tau(x) tree to file
+  treef_tau << xi_mod << std::endl; //cutpoints
+  treef_tau << ntree_mod << std::endl;  //number of trees
+  treef_tau << p_mod << std::endl;  //dimension of x's
+  treef_tau << (int)(nd / thin) << std::endl;
 
 
 
@@ -651,9 +659,9 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
       double rw = 0.;
       double s2 = sigma*sigma;
       for(size_t k=0; k<n; ++k) {
-        double w = s2*mscale*mscale/(allfit_con[k]*allfit_con[k]);
-        if(w!=w) {
-          Rcout << " w " << w << endl;
+        double scale_factor = (allfit_con[k]*allfit_con[k])/(s2*mscale*mscale);
+        if(scale_factor!=scale_factor) {
+          Rcout << " scale_factor " << scale_factor << endl;
           stop("");
         }
 
@@ -664,9 +672,10 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
           Rcout << "mscale " << k << " r " << r << " mscale " <<mscale<< " b*z " << allfit_mod[k]*z_[k] << " bscale " << bscale0 << " " <<bscale1 << endl;
           stop("");
         }
-        ww += 1/w;
-        rw += r/w;
+        ww += scale_factor;
+        rw += r*scale_factor;
       }
+
 
       double mscale_old = mscale;
       double mscale_fc_var = 1/(ww + mscale_prec);
@@ -685,9 +694,9 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
       typedef tree::npv::size_type bvsz;
       double endnode_count = 0.0;
 
-      for(size_t j=0;j<ntree_con;j++) {
+      for(size_t iTreeCon=0;iTreeCon<ntree_con;iTreeCon++) {
         bnv.clear();
-        t_con[j].getbots(bnv);
+        t_con[iTreeCon].getbots(bnv);
         bvsz nb = bnv.size();
         for(bvsz ii = 0; ii<nb; ++ii) {
           double mm = bnv[ii]->getm(); //node parameter
@@ -697,7 +706,6 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
       }
 
       delta_con = gen.gamma(0.5*(1. + endnode_count), 1.0)/(0.5*(1 + ssq));
-
       pi_con.tau   = con_sd/(sqrt(delta_con)*sqrt((double) ntree_con));
 
     } else {
@@ -784,11 +792,12 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
 
 	// Save MCMC output
     if( ((i>=burn) & (i % thin==0)) )  {
-		for (size_t j = 0; j < ntree_mod; j++) treef << t_mod[j] << std::endl;
 
-      msd_post(save_ctr) = fabs(mscale)*con_sd;
-      bsd_post(save_ctr) = fabs(bscale1-bscale0)*mod_sd;
+    for (size_t j = 0; j < ntree_con; j++) treef_mu << t_con[j] << std::endl;
+		for (size_t j = 0; j < ntree_mod; j++) treef_tau << t_mod[j] << std::endl;
 
+      msd_post(save_ctr) = mscale;
+      bsd_post(save_ctr) = bscale1-bscale0;
 	  mybscale1(save_ctr) = bscale1;
 	  mybscale0(save_ctr) = bscale0;
 
@@ -843,7 +852,8 @@ List cSparseBCF(NumericVector y_, NumericVector z_,
   delete[] r_con;
   delete[] ftemp;
 
-  treef.close();
+  treef_mu.close();
+  treef_tau.close();
 
   return(List::create(_["yhat_post"] = yhat_post, _["m_post"] = m_post, _["b_post"] = b_post,
                       _["b_est_post"] = b_est_post, _["sigma"] = sigma_post, _["msd"] = msd_post,
