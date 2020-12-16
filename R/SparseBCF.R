@@ -386,6 +386,9 @@ SparseBCF <-
   # if no OOB is specified
   if (OOB == F) {
 
+    file.remove(save_trees_mu_dir)
+    file.remove(save_trees_tau_dir)
+    
     # Returns
     return(
       list(sigma = sdy*fitbcf$sigma,
