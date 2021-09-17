@@ -154,9 +154,14 @@ myColors <- list("BCF" = "yellowgreen", "SH-BCF" = "#FF5000",
 myplot = 
   ggplot(df) + geom_point(aes(PS,mu, fill = "True"), alpha = 0.8) +
   scale_fill_manual(name = "", values = c("True" = "black")) + 
-  geom_point(aes(PS, mu_fit, color = Type), alpha = 0.5) + theme_minimal() + scale_colour_manual(name = 'Fit:', values = myColors)+ 
-  theme(text = element_text(size=15)) +
-  facet_wrap(~ Type, nrow = 2, ) + ylab("Mu") + xlab("PS") + 
+  geom_point(aes(PS, mu_fit, color = Type, shape = Type), alpha = 0.8) + theme_minimal() + 
+  scale_colour_manual(name = 'Fit:', values = myColors) +
+  scale_shape_manual(name = 'Fit:', 
+                     labels = c("BCF", "SH-BCF", "I-BCF (50)", "I-BCF (100)"),
+                     values = c(17, 18, 3, 4)) +
+  theme(text = element_text(size=15), 
+        axis.title=element_text(size=18, face="bold")) +
+  facet_wrap(~ Type, nrow = 2, ) + ylab(expression(mu)) + xlab(expression(pi)) + 
   guides(fill = guide_legend(override.aes = list(size=2.5)), color = guide_legend(override.aes = list(alpha=0.8, size=3)))
 
 ggsave(filename = "C:/Users/albuz/Dropbox/MyPhD Stats/Research/SparseBCF/Results/Figures/MUvsPS_TarSel.pdf", 

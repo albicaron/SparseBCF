@@ -89,7 +89,7 @@ barplot(colMeans(SPbcf$varprb_mu))
 barplot(colMeans(SPbcf$varprb_tau))
 
 
-########### Plottin ##############
+########### Plotting ##############
 # Get the 10 PS percentiles
 p = quantile(PS_est, probs = seq(0, 1, 0.1))
 index = c(NA)
