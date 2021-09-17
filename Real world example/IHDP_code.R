@@ -141,10 +141,10 @@ CATEplot
 ########### Other plots
 TAU <- 
   ggplot(data = data.frame(tau_SPBCF)) + 
-  geom_density(aes(x = tau_SPBCF, y = ..count../sum(..count..), fill = "SP-BCF"), alpha = 0.6, size = 0.8) + 
+  geom_density(aes(x = tau_SPBCF, y = ..count../sum(..count..), fill = "SH-BCF"), alpha = 0.6, size = 0.8) + 
   geom_vline(xintercept = mean(tau_SPBCF), linetype = "dashed", size = 0.8) +
   geom_vline(xintercept = 0, linetype = "dotted", size = 0.5) +
-  scale_fill_manual(name = "", values = c("SP-BCF" = "blue1")) +
+  scale_fill_manual(name = "", values = c("SH-BCF" = "blue1")) +
   theme_minimal() + scale_x_continuous(breaks = round(seq(-2, 20, 2), 2), limits = c(-2, 20)) +
   ylim(c(0, 0.01)) + ylab("") + xlab("CATE") +
   theme(text = element_text(size=13.5))
@@ -154,13 +154,13 @@ TAU
 
 Tau_25 <- 
   ggplot(data = data.frame(X = 1:P, Tau = colMeans(SPbcf$varprb_tau)), aes(X, Tau)) + 
-  geom_point(size = 2, color = "blue") + geom_segment(aes(x=X, xend=X, y=0, yend=Tau, color = "SP-BCF"), size = 0.8) +
+  geom_point(size = 2, color = "blue") + geom_segment(aes(x=X, xend=X, y=0, yend=Tau, color = "SH-BCF"), size = 0.8) +
   geom_hline(aes(yintercept = 1/P, color = "BCF"), linetype = "dashed", size = 0.5) +
   geom_hline(yintercept = 0, color = "black") +
   theme_minimal() + scale_y_continuous(breaks = seq(0, 0.2, 0.01)) + 
   scale_x_continuous(limits = c(1, P), minor_breaks = seq(1, P, 2), breaks = seq(1, P, 2)) +
   theme(text = element_text(size=14.5)) +
-  scale_color_manual(name = "", values = c("SP-BCF" = "blue", "BCF" = "gray41")) +
+  scale_color_manual(name = "", values = c("SH-BCF" = "blue", "BCF" = "gray41")) +
   ylab(expression("Splitting Probability")) + xlab("j-th predictor") + 
   guides(color = guide_legend(override.aes = list(size = 1)))
 

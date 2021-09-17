@@ -145,10 +145,10 @@ df = data.frame(PS = Pscore, mu = mu,
 df = reshape(data = df, varying = list(3:ncol(df)), timevar = "Type", v.names = "mu_fit", direction = "long")
 df = df %>% 
   select(-id) %>% 
-  mutate(Type = factor(Type, ordered = T, labels = c("BCF", "SP-BCF", "I-BCF (50)", "I-BCF (100)")))
+  mutate(Type = factor(Type, ordered = T, labels = c("BCF", "SH-BCF", "I-BCF (50)", "I-BCF (100)")))
 
 
-myColors <- list("BCF" = "yellowgreen", "SP-BCF" = "#FF5000", 
+myColors <- list("BCF" = "yellowgreen", "SH-BCF" = "#FF5000", 
                  "I-BCF (50)" = "#77BBFF", "I-BCF (100)" = "#566FFB")
 
 myplot = 
@@ -159,7 +159,7 @@ myplot =
   facet_wrap(~ Type, nrow = 2, ) + ylab("Mu") + xlab("PS") + 
   guides(fill = guide_legend(override.aes = list(size=2.5)), color = guide_legend(override.aes = list(alpha=0.8, size=3)))
 
-ggsave(filename = "YOUR DIRECTORY/MUvsPS_TarSel.pdf", 
+ggsave(filename = "C:/Users/albuz/Dropbox/MyPhD Stats/Research/SparseBCF/Results/Figures/MUvsPS_TarSel.pdf", 
        plot = myplot, device = "pdf", height = 8, width = 11, units = "in")
 
 

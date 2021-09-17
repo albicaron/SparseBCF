@@ -59,6 +59,8 @@ Train_PEHE_RLASSO = c(NA); Test_PEHE_RLASSO = c(NA)
 Train_PEHE_CRF = c(NA); Test_PEHE_CRF = c(NA)
 Train_PEHE_SBART = c(NA); Test_PEHE_SBART = c(NA)
 Train_PEHE_TBART = c(NA); Test_PEHE_TBART = c(NA)
+Train_PEHE_SDART = c(NA); Test_PEHE_SDART = c(NA)
+Train_PEHE_TDART = c(NA); Test_PEHE_TDART = c(NA)
 Train_PEHE_BCF = c(NA); Test_PEHE_BCF = c(NA)
 Train_PEHE_SparseBCF = c(NA); Test_PEHE_SparseBCF = c(NA)
 
@@ -365,16 +367,176 @@ system.time(
     
     
     
+    
+    ######################### S-DART
+    #### Train
+    myDART <- wbart(x.train = cbind(train_augmX, z_train), y.train = y_train, sparse = TRUE,
+                    x.test = cbind(test_augmX, z_test), nskip = 2000, ndpost = 4000, printevery = 6000)
+    
+    XZ0_train <- cbind(train_augmX, z_train)
+    XZ0_train[, "z_train"] <- ifelse(XZ0_train[, "z_train"] == 1, 0, 1)
+    
+    
+    Y0_train <- predict(myDART, newdata = XZ0_train)
+    
+    
+    # Non Sparse
+    All_obs <- cbind(Y1 = myDART$yhat.train.mean, 
+                     train_augmX, 
+                     z_train)
+    All_count <- cbind(Y0 = colMeans(Y0_train), 
+                       XZ0_train)
+    
+    All_Trt <- All_obs
+    All_Trt[which(All_Trt[, "z_train"] == 0), ] <- All_count[which(All_count[, "z_train"] == 1), ]
+    
+    All_Ctrl <- All_count
+    All_Ctrl[which(All_Ctrl[, "z_train"] == 1), ] <- All_obs[which(All_obs[, "z_train"] == 0), ]
+    
+    # Store estimates
+    Train_PEHE_SDART[i] = PEHE(Train_ITE, All_Trt[, "Y1"] - All_Ctrl[, "Y0"])
+    
+    
+    
+    #### Test
+    XZ0_test <- cbind(test_augmX, z_test)
+    XZ0_test[, "z_test"] <- ifelse(XZ0_test[, "z_test"] == 1, 0, 1)
+    
+    Y0_test <- predict(myDART, newdata = XZ0_test)
+    
+    
+    # Non Sparse
+    All_obs <- cbind(Y1 = myDART$yhat.test.mean, 
+                     test_augmX, 
+                     z_test)
+    All_count <- cbind(Y0 = colMeans(Y0_test), 
+                       XZ0_test)
+    
+    All_Trt <- All_obs
+    All_Trt[which(All_Trt[, "z_test"] == 0), ] <- All_count[which(All_count[, "z_test"] == 1), ]
+    
+    All_Ctrl <- All_count
+    All_Ctrl[which(All_Ctrl[, "z_test"] == 1), ] <- All_obs[which(All_obs[, "z_test"] == 0), ]
+    
+    # Store estimates
+    Test_PEHE_SDART[i] = PEHE(Test_ITE, All_Trt[, "Y1"] - All_Ctrl[, "Y0"])
+    
+    
+    
+    # Free up space
+    rm(myDART, Y0_train, Y0_test)
+    
+    
+    
+    
+    
+    ###########
+    # Check that there is no single-valued binary variable and in case remove it for T-DART (as it would not split on it)
+    check_train1 = which(apply(train_augmX[z_train == 1, ], 2, function(x) max(x) == min(x)))
+    check_train0 = which(apply(train_augmX[z_train == 0, ], 2, function(x) max(x) == min(x)))
+    
+    check_test1 = which(apply(test_augmX[z_test == 1, ], 2, function(x) max(x) == min(x)))
+    check_test0 = which(apply(test_augmX[z_test == 0, ], 2, function(x) max(x) == min(x)))
+    
+    check_all = c(check_train1, check_train0, check_test1, check_test0)
+    
+    if (length(check_all) > 0) {
+      
+      new_train_X = train_augmX[, -check_all]
+      new_test_X = test_augmX[, -check_all]
+      
+    } else {
+      
+      new_train_X = train_augmX
+      new_test_X = test_augmX
+      
+    }
+    
+    
+    ######################### T-DART
+    #### Train
+    myDART1_shell <- future({
+      wbart(x.train = new_train_X[z_train == 1, ], y.train = y_train[z_train == 1], x.test = new_test_X[z_test == 1, ],
+            nskip = 2000, ndpost = 4000, printevery = 6000, sparse = TRUE)
+    })
+    
+    myDART0_shell <- future({
+      wbart(x.train = new_train_X[z_train == 0, ], y.train = y_train[z_train == 0], x.test = new_test_X[z_test == 0, ],
+            nskip = 2000, ndpost = 4000, printevery = 6000, sparse = TRUE)
+    })  
+    
+    myDART1 <- value(myDART1_shell); myDART0 <- value(myDART0_shell)
+    rm(myDART1_shell, myDART0_shell)
+    
+    
+    # (predict counterfactual)
+    Y1_0_shell <- future({
+      predict(myDART1, newdata = new_train_X[z_train == 0, ])
+    })
+    
+    Y0_1 <- predict(myDART0, newdata = new_train_X[z_train == 1, ])
+    
+    Y1_0 <- value(Y1_0_shell)
+    rm(Y1_0_shell)
+    
+    Y1_train <- y_train
+    Y1_train[z_train == 1] <- myDART1$yhat.train.mean
+    Y1_train[z_train == 0] <- colMeans(Y1_0)
+    
+    Y0_train <- y_train
+    Y0_train[z_train == 0] <- myDART0$yhat.train.mean
+    Y0_train[z_train == 1] <- colMeans(Y0_1)
+    
+    # Store ITE estimates
+    Train_PEHE_TDART[i] = PEHE(Train_ITE, Y1_train - Y0_train)
+    
+    
+    
+    ##### Test
+    
+    # (predict counterfactual)
+    Y1_0_shell <- future({
+      predict(myDART1, newdata = new_test_X[z_test == 0, ])
+    })
+    
+    Y0_1 <- predict(myDART0, newdata = new_test_X[z_test == 1, ])
+    
+    Y1_0 <- value(Y1_0_shell)
+    rm(Y1_0_shell)
+    
+    Y1_test <- y_test
+    Y1_test[z_test == 1] <- myDART1$yhat.test.mean
+    Y1_test[z_test == 0] <- colMeans(Y1_0)
+    
+    Y0_test <- y_test
+    Y0_test[z_test == 0] <- myDART0$yhat.test.mean
+    Y0_test[z_test == 1] <- colMeans(Y0_1)
+    
+    # Store ITE estimates
+    Test_PEHE_TDART[i] = PEHE(Test_ITE, Y1_test - Y0_test)
+    
+    
+    # Remove garbage
+    rm(myDART1, myDART0, Y0_1, Y1_0, new_train_X, new_test_X)
+    
+    
+    
+    
+    
     ######################### Normal BCF
     #### Train
     mybcf <-
-      SparseBCF(y = y_train, z = z_train, x_control = X_train, 
-                x_moderate = X_train, pihat = PS_train, 
-                OOB = T, x_pred = X_test, z_pred = z_test, 
+      SparseBCF(y = y_train, 
+                z = z_train, 
+                x_control = X_train, 
+                pihat = PS_train, 
+                OOB = T, 
                 sparse = F,
-                update_interval = 4000, 
+                x_pred_mu = X_test, 
+                pi_pred = PS_test, 
+                x_pred_tau = X_test,
+                update_interval = 5000, 
                 nburn = 3000, nsim = 7000)
-    
     
     
     Train_PEHE_BCF[i] = PEHE(Train_ITE, apply(mybcf$tau, 2, mean))
@@ -388,13 +550,17 @@ system.time(
     ######################### Sparse BCF
     #### Train
     mysbcf <-
-      SparseBCF(y = y_train, z = z_train, x_control = X_train, 
-                x_moderate = X_train, pihat = PS_train, 
-                OOB = T, x_pred = X_test, z_pred = z_test, 
+      SparseBCF(y = y_train, 
+                z = z_train, 
+                x_control = X_train, 
+                pihat = PS_train, 
+                OOB = T, 
                 sparse = T,
-                update_interval = 2000,
+                x_pred_mu = X_test, 
+                pi_pred = PS_test, 
+                x_pred_tau = X_test,
+                update_interval = 5000,
                 nburn = 3000, nsim = 7000)
-    
     
     
     Train_PEHE_SparseBCF[i] = PEHE(Train_ITE, apply(mysbcf$tau, 2, mean))
@@ -431,6 +597,10 @@ PEHE_Final = data.frame(SOLS = c(mean(Train_PEHE_SOLS), MC_se(Train_PEHE_SOLS, B
                                   mean(Test_PEHE_SBART), MC_se(Test_PEHE_SBART, B)),
                         TBART = c(mean(Train_PEHE_TBART), MC_se(Train_PEHE_TBART, B),
                                   mean(Test_PEHE_TBART), MC_se(Test_PEHE_TBART, B)),
+                        SDART = c(mean(Train_PEHE_SDART), MC_se(Train_PEHE_SDART, B),
+                                  mean(Test_PEHE_SDART), MC_se(Test_PEHE_SDART, B)),
+                        TDART = c(mean(Train_PEHE_TDART), MC_se(Train_PEHE_TDART, B),
+                                  mean(Test_PEHE_TDART), MC_se(Test_PEHE_TDART, B)),
                         BCF = c(mean(Train_PEHE_BCF), MC_se(Train_PEHE_BCF, B),
                                 mean(Test_PEHE_BCF), MC_se(Test_PEHE_BCF, B)),
                         SparseBCF = c(mean(Train_PEHE_SparseBCF), MC_se(Train_PEHE_SparseBCF, B),
@@ -447,6 +617,8 @@ PEHE_Single = data.frame(SOLS_Train = Train_PEHE_SOLS, SOLS_Test = Test_PEHE_SOL
                          CRF_Train = Train_PEHE_CRF, CRF_Test = Test_PEHE_CRF,
                          SBART_Train = Train_PEHE_SBART, SBART_Test = Test_PEHE_SBART,
                          TBART_Train = Train_PEHE_TBART, TBART_Test = Test_PEHE_TBART,
+                         SDART_Train = Train_PEHE_SDART, SDART_Test = Test_PEHE_SDART,
+                         TDART_Train = Train_PEHE_TDART, TDART_Test = Test_PEHE_TDART,
                          BCF_Train = Train_PEHE_BCF, BCF_Test = Test_PEHE_BCF,
                          SparseBCF_Train = Train_PEHE_SparseBCF, SparseBCF_Test = Test_PEHE_SparseBCF)
 
@@ -463,14 +635,16 @@ Split_Final = data.frame(Mu = colMeans(SplitProba_mu),
 
 
 # Save PEHE
+curr_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+
 write.csv(PEHE_Final,
-          paste0("YOUR DIRECTORY/PEHE_Final_P25.csv"))
+          paste0(curr_dir, "/Results/PEHE_Final_P25.csv"))
 
 
 write.csv(PEHE_Single,
-          paste0("YOUR DIRECTORY/PEHE_Single_P25.csv"))
+          paste0(curr_dir, "/Results/PEHE_Single_P25.csv"))
 
 
 write.csv(Split_Final,
-          paste0("YOUR DIRECTORY/Split_Final_P25.csv"))
+          paste0(curr_dir, "/Results/Split_Final_P25.csv"))
 
