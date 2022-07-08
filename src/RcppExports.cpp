@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // cSparseBCF
 List cSparseBCF(NumericVector y_, NumericVector z_, NumericVector x_con_, NumericVector x_mod_, NumericVector x_mod_est_, List x_con_info_list, List x_mod_info_list, arma::mat random_des, arma::mat random_var, arma::mat random_var_ix, double random_var_df, int burn, int nd, int thin, int ntree_mod, int ntree_con, double lambda, double nu, double con_sd, double mod_sd, double con_alpha, double con_beta, double mod_alpha, double mod_beta, double a, double b, double rho, double rho_tau, double theta, double omega, NumericVector weights_mu, NumericVector weights_tau, CharacterVector treef_name_mu_, CharacterVector treef_name_tau_, bool dart, bool aug, int status_interval, bool RJ, bool use_mscale, bool use_bscale, bool b_half_normal, double trt_init);
 RcppExport SEXP _SparseBCF_cSparseBCF(SEXP y_SEXP, SEXP z_SEXP, SEXP x_con_SEXP, SEXP x_mod_SEXP, SEXP x_mod_est_SEXP, SEXP x_con_info_listSEXP, SEXP x_mod_info_listSEXP, SEXP random_desSEXP, SEXP random_varSEXP, SEXP random_var_ixSEXP, SEXP random_var_dfSEXP, SEXP burnSEXP, SEXP ndSEXP, SEXP thinSEXP, SEXP ntree_modSEXP, SEXP ntree_conSEXP, SEXP lambdaSEXP, SEXP nuSEXP, SEXP con_sdSEXP, SEXP mod_sdSEXP, SEXP con_alphaSEXP, SEXP con_betaSEXP, SEXP mod_alphaSEXP, SEXP mod_betaSEXP, SEXP aSEXP, SEXP bSEXP, SEXP rhoSEXP, SEXP rho_tauSEXP, SEXP thetaSEXP, SEXP omegaSEXP, SEXP weights_muSEXP, SEXP weights_tauSEXP, SEXP treef_name_mu_SEXP, SEXP treef_name_tau_SEXP, SEXP dartSEXP, SEXP augSEXP, SEXP status_intervalSEXP, SEXP RJSEXP, SEXP use_mscaleSEXP, SEXP use_bscaleSEXP, SEXP b_half_normalSEXP, SEXP trt_initSEXP) {
